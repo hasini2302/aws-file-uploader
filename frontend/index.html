@@ -1,30 +1,91 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
-  <meta charset="UTF-8">
-  <title>Upload File to AWS S3</title>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>File Uploader | AWS S3</title>
+
+  <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;600&display=swap" rel="stylesheet">
+
+  <style>
+    * { box-sizing: border-box; margin:0; padding:0; font-family:'Poppins',sans-serif; }
+    body { background: linear-gradient(135deg,#6c63ff,#836fff); height:100vh; display:flex; align-items:center; justify-content:center; }
+    .card { background:#fff; padding:36px; border-radius:16px; width:420px; box-shadow:0 8px 30px rgba(0,0,0,0.12); text-align:center; }
+    h1 { color:#6c63ff; margin-bottom:8px; }
+    p.sub { color:#666; margin-bottom:18px; }
+    input[type=file] { display:none; }
+    label.btn-choose { background:#6c63ff; color:#fff; padding:10px 22px; border-radius:999px; cursor:pointer; display:inline-block; font-weight:600; }
+    button.btn-upload { background:#00c896; color:#fff; border:none; padding:10px 24px; border-radius:999px; margin-top:14px; cursor:pointer; font-weight:600; }
+    .meta { margin-top:12px; color:#444; font-size:0.95rem; word-wrap:break-word; }
+    a.link { color:#6c63ff; font-weight:600; text-decoration:none; }
+    footer { margin-top:18px; color:#888; font-size:0.85rem; }
+  </style>
 </head>
 <body>
-  <h2>Upload File to AWS S3</h2>
-  <input type="file" id="fileInput">
-  <button onclick="uploadFile()">Upload</button>
-  <p id="result"></p>
+  <div class="card">
+    <h1>🚀 File Uploader</h1>
+    <p class="sub">Upload a file to AWS S3 — simple, secure and public link returned.</p>
+
+    <input id="fileInput" type="file" />
+    <label for="fileInput" class="btn-choose">Choose File</label>
+
+    <div class="meta" id="fileName"></div>
+    <button class="btn-upload" id="uploadBtn">Upload</button>
+
+    <div id="result" class="meta"></div>
+    
+  </div>
 
   <script>
-    async function uploadFile() {
-      const file = document.getElementById("fileInput").files[0];
+    // ====== CONFIG ======
+    // Replace with your deployed backend URL if different
+    const BACKEND_URL = "https://file-uploader-backend-9cdl.onrender.com";
+    // ====================
+
+    const fileInput = document.getElementById("fileInput");
+    const fileName = document.getElementById("fileName");
+    const uploadBtn = document.getElementById("uploadBtn");
+    const result = document.getElementById("result");
+
+    fileInput.addEventListener("change", () => {
+      fileName.textContent = fileInput.files[0]?.name || "";
+      result.textContent = "";
+    });
+
+    uploadBtn.addEventListener("click", async () => {
+      const file = fileInput.files[0];
+      if (!file) {
+        result.textContent = "Please choose a file first.";
+        return;
+      }
+
+      result.textContent = "⏳ Uploading...";
+
       const formData = new FormData();
       formData.append("file", file);
 
-      const res = await fetch("http://localhost:5000/upload", {
-        method: "POST",
-        body: formData
-      });
+      try {
+        const res = await fetch(BACKEND_URL + "/upload", {
+          method: "POST",
+          body: formData
+        });
 
-      const data = await res.json();
-      document.getElementById("result").innerHTML =
-        `<a href="${data.url}" target="_blank">${data.url}</a>`;
-    }
+        if (!res.ok) {
+          const text = await res.text();
+          throw new Error(`Server responded ${res.status}: ${text}`);
+        }
+
+        const data = await res.json();
+        if (data.url) {
+          result.innerHTML = `✅ Uploaded! <br><a class="link" href="${data.url}" target="_blank">${data.url}</a>`;
+        } else {
+          result.textContent = "Upload succeeded but no URL returned.";
+        }
+      } catch (err) {
+        console.error("Upload error:", err);
+        result.textContent = "Upload failed: " + err.message;
+      }
+    });
   </script>
 </body>
 </html>
